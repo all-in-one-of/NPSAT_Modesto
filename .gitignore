@@ -20,7 +20,9 @@
 !/input/*.npsat
 !/input/BC_files
 
-!/NPSAT_input_files_BAU/*.md
+!/NPSAT_input_files_BAU
+/NPSAT_input_files_BAU/*
+!*.md
 
 
 
