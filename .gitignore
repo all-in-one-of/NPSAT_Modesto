@@ -1,0 +1,28 @@
+#ignore all files
+/*
+#List of file types to include in the root folder
+!*.asc
+!*.dbf
+!*.hipnc
+!*.m
+!*.prj
+!*.qpj
+!*.shp
+!*.xml
+
+#List of selected files to include in the root folder
+!.gitignore
+!InputConcentration.mat
+
+#--------INPUT FOLDER--------
+!/input
+/input/*
+!/input/*.npsat
+!/input/BC_files
+
+!/NPSAT_input_files_BAU/*.md
+
+
+
+
+
