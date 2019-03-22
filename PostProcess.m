@@ -1,18 +1,20 @@
 %% Generate URFs for the 7 refinements
 % add the path to the NPSAT toolbox matlab commands
 %addpath('/home/giorgk/CODES/NPSAT/matlab')
-%{
-for iref = 0:7
+addpath('/home/giorgk/Documents/CODES/NPSAT/matlab');
+%
+res_dir = '/media/giorgk/DATA/giorgk/Documents/NPSAT_Modesto/Results/';
+for iref = 7:7
     WellURF = [];
-    urf_files = dir(['Results/Ref' num2str(iref) '/*.urfs']);
+    urf_files = dir([res_dir 'Ref' num2str(iref) '/*.urfs']);
     for jj = 1:length(urf_files)
         display(['Refinement: ' num2str(iref)])
         if urf_files(jj,1).bytes > 0
-            temp = readURFs(['Results/Ref' num2str(iref) '/' urf_files(jj,1).name]);
+            temp = readURFs([res_dir 'Ref' num2str(iref) '/' urf_files(jj,1).name], []);
             WellURF = [WellURF;temp];
         end
     end
-    save(['URFs_Ref_' num2str(iref)], 'WellURF');
+    save([res_dir 'URFs_Ref_' num2str(iref)], 'WellURF');
 end
 %% Import and process concentration input
 % import the Conc540transientmatrix.dat file as matrix and arrange the rows
@@ -53,7 +55,7 @@ xcoord = @(ii)200 + (ii-1).*400;
 ycoord = @(ii)61200 - (200 + (ii-1).*400);
 %}
 %% Convolute concentration with URFs
-%{
+%
 load('InputConc_v2.mat', 'Nload')
 Conc = Nload;
 for iref = 7:7
@@ -142,6 +144,7 @@ temp_prc = prctile(temp, [10:10:90]);
 plot(temp_prc','linewidth', 2)
 %}
 %% Run the 7th refinement 
+%{
 iref = 7;
 alphas = [0.1  0.15  0.2 0.25 0.3 0.4 0.6 1 1.3 1.6 1.9];
 betas = 0.5:0.1:1.2;
@@ -160,3 +163,32 @@ for ia = 1:length(alphas)
         save(['Results/URFs_Ref_a' num2str(ia) '_b' num2str(ib)], 'WellURF');
     end
 end
+%}
+%% This is an attempt to make the above loop to run under Octave
+% pkg load statistics %(for the nanmean function)
+res_path = '/media/giorgk/DATA/giorgk/Documents/NPSAT_Modesto/Results/';
+iref = 7;
+alphas = [0.1  0.15  0.2 0.25 0.3 0.4 0.6 1 1.3 1.6 1.9];
+betas = 0.5:0.1:1.2;
+% define istart iend on the workspace
+for ii = istart:iend
+    [ia, ib] = ind2sub([length(alphas) length(betas)], ii); 
+    opt.alpha = alphas(ia);
+    opt.beta = betas(ib);
+    WellURF = [];
+    urf_files = dir([res_path 'Ref' num2str(iref) '/*.urfs']);
+    for jj = 1:length(urf_files)
+        if urf_files(jj,1).bytes > 0
+            temp = readURFs([urf_files(jj,1).folder '/' urf_files(jj,1).name], opt);
+            WellURF = [WellURF;temp];
+        end
+    end
+    save([res_path 'URFs_Ref_a' num2str(ia) '_b' num2str(ib)], 'WellURF');
+end
+%% 
+URFS = nan(length(WellURF),200);
+for ii = 1:length(WellURF)
+    URFS(ii,:) = WellURF(ii).URF;
+end
+%%
+plot(URFS(22001:44000,:)')
