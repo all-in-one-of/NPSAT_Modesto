@@ -17,14 +17,17 @@ tbl = xlsread([NPSAT_input_files_BAU 'Results_MT3D_disp11.xlsx'], 'Sheet1');
 MT3DRes.disp = 11;
 MT3DRes.BTC = tbl(2:end,4:2:92);
 MT3DRes.RC = tbl(2:end,1:2);
-%% load 300 yr BCT from Mt3D
-load([team_drive 'Results/BTC_Steady_yr2000_300yrs_MT3D'])
-BTC_2000SS = BTC;
 %% Compare 200 year predictions between Best of NPSAT and MT3D
 load([team_drive 'Results/BTC_Steady_yr2000_300yrs_MT3D'])
 BTC_2000SS = BTC;
+
+load('WellBTCResults_v1TR.mat')
+BTC_NPSAT_TR = AllRefRes(9,1).BTCALL;
+
 load('WellBTCResults_v1.mat')
 BTC_NPSAT = AllRefRes(9,1).BTCALL;
+
+
 
 %load('MT3D_Results.mat')
 %load('WellBTCResults_v1.mat')
@@ -133,11 +136,13 @@ prc =[50];
 figure(10);clf
 figure(10); hold on
 npsat_prc = prctile(AllRefRes(9,1).BTCALL(incID,1:45), prc);
+npsat_prcTR = prctile(BTC_NPSAT_TR(incID,1:45), prc);
 mt3d_SSprc = prctile(BTC_2000SS(incID,3:47), prc);
 mt3d_TRprc = prctile(BTC_TR(incID,3:47), prc);
 plot(npsat_prc, 'color', colormat3(1,:), 'linewidth', 3, 'DisplayName', 'NPSAT');
 plot(mt3d_SSprc, 'color', colormat3(2,:), 'linewidth', 3, 'DisplayName', 'MT3D (SS)');
 plot(mt3d_TRprc, 'color', colormat3(3,:), 'linewidth', 3, 'DisplayName', 'MT3D (TR)');
+plot(npsat_prcTR, 'color', colormat2(4,:), 'linewidth', 3, 'DisplayName', 'NPSAT (TR)');
 xlabel('Time [years]','fontsize', 14);
 ylabel('Concentration [M/L^3]','fontsize', 14)
 title([num2str(prc) ' percentile'])
@@ -154,11 +159,13 @@ for ii = [5 25 75 95]
     cnt = cnt + 1;
     subplot(2,2,cnt); hold on
     npsat_prc = prctile(AllRefRes(9,1).BTCALL(incID,1:45), ii);
+    npsat_prcTR = prctile(BTC_NPSAT_TR(incID,1:45), ii);
     mt3d_SSprc = prctile(BTC_2000SS(incID,3:47), ii);
     mt3d_TRprc = prctile(BTC_TR(incID,3:47), ii);
     plot(npsat_prc, 'color', colormat3(1,:), 'linewidth', 3, 'DisplayName', 'NPSAT');
     plot(mt3d_SSprc, 'color', colormat3(2,:), 'linewidth', 3, 'DisplayName', 'MT3D (SS)');
     plot(mt3d_TRprc, 'color', colormat3(3,:), 'linewidth', 3, 'DisplayName', 'MT3D (TR)');
+    plot(npsat_prcTR, 'color', colormat2(4,:), 'linewidth', 3, 'DisplayName', 'NPSAT (TR)');
     if cnt > 2
         xlabel('Time [years]','fontsize', 14);
     end

@@ -5,17 +5,17 @@
 npsat_data = '/media/giorgk/DATA/giorgk/Documents/NPSAT_Modesto/';
 res_dir = '/media/giorgk/DATA/giorgk/Documents/NPSAT_Modesto/Results/';
 %%
-for iref = 0:9
+for iref = 8:8
     WellURF = [];
-    urf_files = dir([res_dir 'Ref' num2str(iref) '/*.urfs']);
+    urf_files = dir([res_dir 'Ref' num2str(iref) 'TR/*.urfs']);
     for jj = 1:length(urf_files)
         display(['Refinement: ' num2str(iref)])
         if urf_files(jj,1).bytes > 0
-            temp = readURFs([res_dir 'Ref' num2str(iref) '/' urf_files(jj,1).name], []);
+            temp = readURFs([res_dir 'Ref' num2str(iref) 'TR/' urf_files(jj,1).name], []);
             WellURF = [WellURF;temp];
         end
     end
-    save([res_dir 'URFs_Ref_an' num2str(iref)], 'WellURF');
+    %save([res_dir 'URFs_Ref_an' num2str(iref)], 'WellURF');
 end
 %% Import and process concentration input
 % import the Conc540transientmatrix.dat file as matrix and arrange the rows
@@ -83,9 +83,9 @@ exclID = find(wells(:,2)<=13000) - 1;
 
 Nyears = 45;
 
-for iref = 0:8
+for iref = 8:8
     iref
-    load([res_dir 'URFs_Ref_' num2str(iref)]);
+    load([res_dir 'URFs_Ref' num2str(iref) 'TR']);
 %     dlt = [];
 %     for jj = 1:length(WellURF)
 %         if ~isempty(find(exclID == WellURF(jj,1).Eid, 1))
@@ -127,7 +127,7 @@ LF_prc = prctile(LF, [10:10:90]);
 figure(2);
 plot(LF_prc')
 %% Group all BTC into one variable
-for iref = 1:9
+for iref = 9:9
     BTCALL = [];
     for jj = 1:length(AllRefRes(iref,1).btc)
         if any(isinf(AllRefRes(iref,1).btc(jj,1).BTC))
