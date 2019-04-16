@@ -1,7 +1,8 @@
 %
 %% Here I'll read Mehrdad's input files and convert them to npsat format
 mehrdad_dir = '/home/giorgk/Documents/UCDAVIS/Mehrdad/NPSAT_input_files_BAU/';
-input_dir = '/home/giorgk/Documents/UCDAVIS/Mehrdad/input/';
+mehrdad_dir = '/media/giorgk/DATA/giorgk/Documents/NPSAT_Modesto/NPSAT_input_files_BAU/';
+input_dir = 'input/';
 output_dir = '/home/giorgk/Documents/UCDAVIS/Mehrdad/output/';
 %% Top and bottom
 % Read the xlc after converted to csv
@@ -253,21 +254,51 @@ writeScatteredData([input_dir 'KZ_data.npsat'],...
 writeScatteredData([input_dir 'Por_data.npsat'],...
        struct('PDIM', 2, 'TYPE', 'FULL', 'MODE', 'STRATIFIED'),...
        DATA_Pr);
-
-
+%% Find the elevation of the water table.
+load('SteadyFlowHeadMatrixAll.mat')
+SteadyFlowHead = zeros(153,137,16);
+for ii = 1:16
+    SteadyFlowHead(:,:,ii) = SteadyFlowHeadMatrixAll((ii-1)*153+1:ii*153,:);
+end
 
 %% Wells
 % row,column,layer,x,y,pumpage (m3/d),Elv of bottom of screen (m),Elv of top of screen (m)
 raw_well_data = csvread([mehrdad_dir 'well.csv'],1,0);
 well_IJ = unique(raw_well_data(:,1:2),'rows');
+clear well_data WellData
 well_data = nan(size(well_IJ,1),5);
 for ii = 1:size(well_IJ,1)
+    % Find the heads in the steady state solution for modflow
+    H = reshape(SteadyFlowHead(well_IJ(ii,1), well_IJ(ii,2),:),16,1);
     id = find(raw_well_data(:,1) == well_IJ(ii,1) & raw_well_data(:,2) == well_IJ(ii,2));
     well_data(ii,1) = raw_well_data(id(1),4);
     well_data(ii,2) = raw_well_data(id(1),5);
     well_data(ii,3) = max(raw_well_data(id,8));
-    well_data(ii,4) = max(raw_well_data(id,7));
+    well_data(ii,4) = min(raw_well_data(id,7));
     well_data(ii,5) = sum(raw_well_data(id,6));
+    
+    WellData(ii,1).I = well_IJ(ii,1);
+    WellData(ii,1).J = well_IJ(ii,2);
+    WellData(ii,1).X = raw_well_data(id(1),4);
+    WellData(ii,1).Y = raw_well_data(id(1),5);
+    WellData(ii,1).Top_init = max(raw_well_data(id,8));
+    WellData(ii,1).Bop_init = min(raw_well_data(id,7));
+    WellData(ii,1).SL = WellData(ii,1).Top_init - WellData(ii,1).Bop_init;
+    WellData(ii,1).WT = H(find(H > -9998,1));
+    WellData(ii,1).D_wt_top = WellData(ii,1).WT - WellData(ii,1).Top_init;
+    WellData(ii,1).Q = well_data(ii,5);
+end
+%% 
+% Assign to the wells that have top of the screen higher that the water table
+% a random depth based on the distribution of the other wells
+D_wt_top = [WellData.D_wt_top]';
+[d, fd] = ecdf(D_wt_top(D_wt_top > 0));
+for ii = 1:length(WellData)
+    if WellData(ii,1).D_wt_top > 0
+        WellData(ii,1).D_wt_top_mod = WellData(ii,1).D_wt_top;
+    else
+        WellData(ii,1).D_wt_top_mod = interp1(d,fd,rand);
+    end
 end
 %%
 fid = fopen([input_dir 'well_data.npsat'],'w');
@@ -321,24 +352,38 @@ end
 writeStreams([input_dir 'stream_data.npsat'], polys);
 %% Adjust the wells so that they are below the water table
 % read the wells 
-wells = readWells([input_dir 'well_data.npsat']);
+load('WellData_Init.mat', 'WellData')
 % read the water table cloud points
-WTC = ReadWaterTableCloudPoints([output_dir 'Modsttop_000_'], 4, true);%
+WTC = ReadWaterTableCloudPoints([output_dir 'Modst_ref7_top_' num2str(4,'%03d') '_'], 32, true);
 %% Create an interpolant;
 Fnewtop = scatteredInterpolant(WTC(:,1), WTC(:,2), WTC(:,3));
 %% Update well elevation
-w_el = Fnewtop(wells(:,1),wells(:,2));
-id_ab = find(w_el-10 < wells(:,3));
-offset = wells(:,3) - (w_el-10);
-wells(id_ab,3) = wells(id_ab,3) - offset(id_ab);
-wells(id_ab,4) = wells(id_ab,4) - offset(id_ab);
+for ii = 1:length(WellData)
+    xw = WellData(ii,1).X;
+    yw = WellData(ii,1).Y;
+    wtb = Fnewtop(xw, yw);
+    d = WellData(ii,1).D_wt_top_mod;
+    sl = WellData(ii,1).SL;
+    top = wtb - d;
+    bot = top - sl;
+    wells(ii,:) = [xw yw top bot WellData(ii,1).Q];
+end
 %% write wells
-fid = fopen([input_dir 'well_data1.npsat'],'w');
+fid = fopen([input_dir 'well_data4.npsat'],'w');
 fprintf(fid, '%d\n', size(wells, 1));
 fprintf(fid, '%0.3f %0.3f %0.3f %0.3f %0.3f\n', wells');
 fclose(fid);
 %% Write all water table cloud iterations
-for ii = 0:5
-    WTC = ReadWaterTableCloudPoints([output_dir 'Modsttop_00' num2str(ii) '_'], 4, true);
+output_dir = '/media/giorgk/DATA/giorgk/Documents/NPSAT_Modesto/Results/tempOutput/';
+for ii = 0:4
+    WTC = ReadWaterTableCloudPoints([output_dir 'Modst_ref7_top_' num2str(ii,'%03d') '_'], 32, true);
 end
-
+%% Create an initial top based on a previous solution
+top0 = read_Scattered([input_dir 'top_elev.npsat'],2);
+% read the solution that we want to make it initial elevation
+WTC = ReadWaterTableCloudPoints([output_dir 'Modst_ref7_top_' num2str(4,'%03d') '_'], 32, true);
+Fnewtop = scatteredInterpolant(WTC(:,1), WTC(:,2), WTC(:,3));
+elev_new = Fnewtop(top0.p(:,1), top0.p(:,2));
+writeScatteredData([input_dir 'top_elev1.npsat'], ...
+                   struct('PDIM', 2, 'TYPE', 'HOR', 'MODE', 'SIMPLE'),...
+                   [top0.p(:,1), top0.p(:,2),elev_new]);

@@ -24,6 +24,12 @@
 /NPSAT_input_files_BAU/*
 !*.md
 
+!/input_tr
+/input_tr/*
+!/input_tr/*.npsat
+!/input_tr/*.m
+!/input_tr/*.md
+
 
 
 

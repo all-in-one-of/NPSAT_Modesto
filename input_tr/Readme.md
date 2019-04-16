@@ -1,0 +1,1 @@
+This contains the input files that correspond to the case where the pumping is equal to the overall transient pumping which is 3195370 m^3/day or 78% of the 2000 pumping rate
